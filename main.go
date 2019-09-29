@@ -32,8 +32,8 @@ import (
 var (
 	seqSeed = uint32(0)
 
-	clientNum = flag.Int("num", 1, "client num input for test")
-	gwAddr = flag.String("addr", "test.zhanqi.tv:8989", "测试网关地址")
+	clientNum = flag.Int("num", 5000, "client num input for test")
+	gwAddr = flag.String("addr", "127.0.0.1:8989", "测试网关地址")
 )
 
 func init() {
@@ -54,6 +54,8 @@ func main() {
 		wg.Add(1)
 		go func() {
 			quit := make(chan struct{})
+			// quitRead := make(chan struct{})
+			// quitHeart := make(chan struct{})
 			defer func() {
 				close(quit)
 				wg.Done()
@@ -67,9 +69,9 @@ func main() {
 			}
 			defer conn.Close()
 
-			go readloop(conn, quit)
+			// go readloop(conn, quit, quitRead)
 
-			go heartbeat(conn, quit)
+			// go heartbeat(conn, quit, quitHeart)
 
 			for {
 				select {
@@ -77,13 +79,13 @@ func main() {
 					return
 				default:
 				}
-				req := &gwproto.Method1Request{}
-				sendPacket(req, conn, gwproto.GetIdByMsgObj(req))
+				// req := &gwproto.Method1Request{}
+				// sendPacket(req, conn, gwproto.GetIdByMsgObj(req))
 				time.Sleep(time.Second)
 
-				req2 := &gwproto.Method1Request{}
-				sendPacket(req2, conn, gwproto.GetIdByMsgObj(req2))
-				time.Sleep(time.Second)
+				// req2 := &gwproto.Method2Request{}
+				// sendPacket(req2, conn, gwproto.GetIdByMsgObj(req2))
+				time.Sleep(time.Second*7200)
 			}
 		}()
 	}
@@ -93,11 +95,11 @@ func main() {
 	logs.GetBeeLogger().Flush()
 }
 
-func heartbeat(conn net.Conn, quit chan struct{}) {
+func heartbeat(conn net.Conn, quit, quitHeart chan struct{}) {
 	ticker := time.NewTicker(30 * time.Second)
 	defer func() {
 		ticker.Stop()
-		close(quit)
+		close(quitHeart)
 		recover()
 	}()
 	for {
@@ -111,10 +113,10 @@ func heartbeat(conn net.Conn, quit chan struct{}) {
 	}
 }
 
-func readloop(conn net.Conn, quit chan struct{}) {
+func readloop(conn net.Conn, quit, quitRead chan struct{}) {
 	headData := [codec.PACK_HEAD_SIZE]byte{}
 	defer func() {
-		close(quit)
+		close(quitRead)
 		recover()
 	}()
 	for {
